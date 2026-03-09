@@ -1,7 +1,7 @@
 # F1 APEX Titanium 
 
 # Live Demo
-
+https://rajveerjetly.github.io/F1/
 # Project Overview
 F1 Strategy Pro is a logic-based simulation engine that places the user in the role of a Team Principal. Unlike traditional racing games focused on reflexes, this project is an exercise in Probability-Based Decision Making and Resource Optimization. The engine simulates the high-stakes environment of a Grand Prix, where success is determined by managing limited resources (tyres, fuel, time) against randomized environmental variables.
 

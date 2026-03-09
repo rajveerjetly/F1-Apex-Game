@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Manager: Titanium Edition V5</title>
+    <style>
+        :root {
+            --bg-dark: #09090b;
+            --bg-panel: #18181b;
+            --bg-header: #27272a;
+            --primary: #ef4444; /* Racing Red */
+            --accent: #3b82f6; /* Blue */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --text: #f4f4f5;
+            --text-muted: #a1a1aa;
+            
+            --soft: #ff3b3b;
+            --med: #ffd93b;
+            --hard: #f0f0f0;
+            --inter: #22c55e;
+            
+            --font-main: 'Segoe UI', system-ui, sans-serif;
+            --font-mono: 'Consolas', monospace;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text);
+            font-family: var(--font-main);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR --- */
+        aside {
+            width: 260px;
+            background: var(--bg-panel);
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            z-index: 20;
+        }
+
+        .brand {
+            padding: 25px;
+            font-size: 1.4rem;
+            font-weight: 900;
+            font-style: italic;
+            border-left: 5px solid var(--primary);
+            background: linear-gradient(90deg, rgba(239,68,68,0.1), transparent);
+            letter-spacing: -1px;
+        }
+
+        .nav-btn {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 600;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 3px solid transparent;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.03); color: white; }
+        .nav-btn.active { background: rgba(239,68,68,0.1); color: white; border-left-color: var(--primary); }
+        .nav-badge { background: var(--primary); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; margin-left: auto; display: none; }
+        .nav-badge.show { display: block; }
+
+        /* --- MAIN --- */
+        main { flex: 1; display: flex; flex-direction: column; position: relative; }
+
+        header {
+            height: 70px;
+            background: var(--bg-header);
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+        }
+
+        .stat-group { display: flex; gap: 30px; }
+        .stat-item label { display: block; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .stat-item val { font-size: 1.2rem; font-weight: 700; font-family: var(--font-mono); }
+        .money { color: var(--success); }
+
+        .btn {
+            background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px;
+            font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; font-size: 0.8rem;
+        }
+        .btn:hover { filter: brightness(1.1); }
+        .btn:disabled { background: #444; cursor: not-allowed; }
+        .btn-outline { background: transparent; border: 1px solid #555; }
+        .btn-outline:hover { border-color: white; background: rgba(255,255,255,0.05); }
+
+        /* --- CONTENT VIEWS --- */
+        #content { flex: 1; padding: 30px; overflow-y: auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+
+        .card {
+            background: var(--bg-panel); border: 1px solid #333; border-radius: 10px; padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .card h2 { margin-top: 0; font-size: 1.1rem; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; }
+
+        /* Inbox */
+        .msg-row { padding: 10px; border-bottom: 1px solid #333; cursor: pointer; }
+        .msg-row:hover { background: rgba(255,255,255,0.02); }
+        .msg-row.unread { border-left: 3px solid var(--accent); background: rgba(59, 130, 246, 0.05); }
+        .msg-subject { font-weight: bold; }
+        .msg-body { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+        /* Market */
+        .driver-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(0,0,0,0.2); margin-bottom: 10px; border-radius: 8px; }
+        .d-info { display: flex; align-items: center; gap: 15px; }
+        .d-stat { font-family: var(--font-mono); font-weight: bold; color: var(--accent); }
+        .d-cost { color: var(--success); font-weight: bold; }
+        .btn-group { display: flex; gap: 5px; }
+
+        /* --- RACE OVERLAY --- */
+        #race-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 100; display: none; flex-direction: column;
+        }
+
+        .race-header { height: 60px; background: var(--bg-header); border-bottom: 4px solid var(--primary); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+        .race-grid { flex: 1; display: grid; grid-template-columns: 350px 1fr 300px; overflow: hidden; }
+
+        /* Leaderboard */
+        .lb-panel { background: var(--bg-panel); border-right: 1px solid #333; overflow-y: auto; }
+        .lb-row { 
+            display: grid; grid-template-columns: 40px 1fr 50px 70px; padding: 10px 15px; border-bottom: 1px solid #333; align-items: center; font-size: 0.9rem;
+            /* Smooth transition for position change */
+            transition: all 0.5s ease-in-out; 
+        }
+        .lb-row.player { background: rgba(239,68,68,0.1); border-left: 3px solid var(--primary); }
+        .lb-pos { font-family: var(--font-mono); color: var(--text-muted); }
+        .lb-time { font-family: var(--font-mono); font-size: 0.8rem; }
+        
+        .tire-badge { width: 20px; height: 20px; border-radius: 50%; font-size: 10px; color: black; font-weight: bold; display: grid; place-items: center; }
+        .t-s { background: var(--soft); } .t-m { background: var(--med); } .t-h { background: var(--hard); } .t-i { background: var(--inter); }
+
+        /* Center */
+        .center-view { background: #111; position: relative; display: flex; flex-direction: column; }
+        .track-box { 
+            flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px; 
+            /* Track rotation transition */
+            transition: transform 1s ease-in-out;
+        }
+        .track-path { fill: none; stroke: #333; stroke-width: 6; }
+        .weather-status { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 5px 15px; border-radius: 20px; border: 1px solid #444; font-size: 0.8rem; display: flex; gap: 8px; align-items: center;}
+
+        /* Pit Wall */
+        .pit-wall { background: var(--bg-panel); border-left: 1px solid #333; display: flex; flex-direction: column; }
+        .driver-control { flex: 1; padding: 15px; border-bottom: 1px solid #444; display: flex; flex-direction: column; }
+        .dc-header { font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 10px; color: var(--accent); }
+        .telemetry { background: #000; padding: 10px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.8rem; margin-bottom: 10px; }
+        .t-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .strat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
+        .strat-btn { background: #222; border: 1px solid #444; color: #888; padding: 8px; cursor: pointer; display: flex; justify-content: center; }
+        .strat-btn.selected { border-color: var(--warning); background: rgba(245, 158, 11, 0.1); color: white; }
+        .box-btn { width: 100%; border: none; background: var(--warning); color: black; font-weight: bold; padding: 10px; cursor: pointer; opacity: 0.5; }
+        .box-btn.active { opacity: 1; animation: pulse 1s infinite; }
+        
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        
+        /* Modal */
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:200; display:none; align-items:center; justify-content:center; }
+        .modal { background: var(--bg-panel); padding: 30px; border-radius: 10px; width: 500px; border: 1px solid #444; }
+
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="brand">APEX<br>TITANIUM</div>
+        <div class="nav-btn active" onclick="UI.go('home')">🏠 Dashboard</div>
+        <div class="nav-btn" onclick="UI.go('inbox')">📩 Inbox <span id="mail-badge" class="nav-badge">0</span></div>
+        <div class="nav-btn" onclick="UI.go('car')">🏎️ Development</div>
+        <div class="nav-btn" onclick="UI.go('market')">🤝 Drivers</div>
+        <div class="nav-btn" onclick="UI.go('sponsors')">💰 Sponsors</div>
+        <div class="nav-btn" onclick="UI.go('standings')">🏆 Standings</div>
+    </aside>
+
+    <main>
+        <header>
+            <div class="stat-group">
+                <div class="stat-item">
+                    <label>Budget</label>
+                    <val class="money" id="ui-money">$45.0M</val>
+                </div>
+                <div class="stat-item">
+                    <label>Next Grand Prix</label>
+                    <val id="ui-track">Bahrain</val>
+                </div>
+            </div>
+            <button class="btn" onclick="Game.preRace()">Go To Race</button>
+        </header>
+
+        <div id="content">
+            </div>
+
+        <div id="race-overlay">
+            <div class="race-header">
+                <div style="font-weight:900; font-style:italic">LIVE TIMING</div>
+                <div style="font-family:var(--font-mono)">LAP <span id="race-lap">0/0</span></div>
+                <button class="btn" onclick="Race.toggleSpeed()">Speed x<span id="race-speed">1</span></button>
+            </div>
+            <div class="race-grid">
+                <div class="lb-panel" id="leaderboard"></div>
+                
+                <div class="center-view">
+                    <div class="weather-status"><span id="w-icon">☀️</span> <span id="w-text">DRY</span></div>
+                    <div class="track-box" id="track-vis"></div>
+                    <div style="padding:20px; text-align:center; color:#666; font-size:0.9rem" id="race-comms">Initializing...</div>
+                </div>
+
+                <div class="pit-wall">
+                    <div class="driver-control">
+                        <div class="dc-header"><span id="d1-hud-name">D1</span> <span>#<span id="d1-num">0</span></span></div>
+                        <div class="telemetry">
+                            <div class="t-row"><span>Tire Grip</span> <span id="d1-tire">100%</span></div>
+                            <div class="t-row"><span>Last Lap</span> <span id="d1-pace">--:--</span></div>
+                        </div>
+                        <div class="strat-grid" id="d1-strat-btns">
+                            <div class="strat-btn" onclick="Race.setStrat(1, 'soft')"><span class="tire-badge t-s">S</span></div>
+                            <div class="strat-btn" onclick="Race.setStrat(1, 'medium')"><span class="tire-badge t-m">M</span></div>
+                            <div class="strat-btn" onclick="Race.setStrat(1, 'hard')"><span class="tire-badge t-h">H</span></div>
+                            <div class="strat-btn" onclick="Race.setStrat(1, 'inter')"><span class="tire-badge t-i">I</span></div>
+                        </div>
+                        <button class="box-btn" id="btn-box-1" onclick="Race.box(1)">BOX BOX</button>
+                    </div>
+                    <div class="driver-control">
+                        <div class="dc-header"><span id="d2-hud-name">D2</span> <span>#<span id="d2-num">0</span></span></div>
+                        <div class="telemetry">
+                            <div class="t-row"><span>Tire Grip</span> <span id="d2-tire">100%</span></div>
+                            <div class="t-row"><span>Last Lap</span> <span id="d2-pace">--:--</span></div>
+                        </div>
+                        <div class="strat-grid" id="d2-strat-btns">
+                            <div class="strat-btn" onclick="Race.setStrat(2, 'soft')"><span class="tire-badge t-s">S</span></div>
+                            <div class="strat-btn" onclick="Race.setStrat(2, 'medium')"><span class="tire-badge t-m">M</span></div>
+                            <div class="strat-btn" onclick="Race.setStrat(2, 'hard')"><span class="tire-badge t-h">H</span></div>
+                            <div class="strat-btn" onclick="Race.setStrat(2, 'inter')"><span class="tire-badge t-i">I</span></div>
+                        </div>
+                        <button class="box-btn" id="btn-box-2" onclick="Race.box(2)">BOX BOX</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="modal-prerace">
+            <div class="modal">
+                <h2>Race Strategy</h2>
+                <p>Select starting compounds. Note: Intermediate tires are only needed when conditions are WET (70%+).</p>
+                <div style="margin-bottom:15px">
+                    <label id="lbl-d1">Driver 1</label>
+                    <select id="sel-d1" style="width:100%; padding:10px; background:#222; color:white; border:none">
+                        <option value="soft">Soft</option><option value="medium" selected>Medium</option><option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:25px">
+                    <label id="lbl-d2">Driver 2</label>
+                    <select id="sel-d2" style="width:100%; padding:10px; background:#222; color:white; border:none">
+                        <option value="soft">Soft</option><option value="medium" selected>Medium</option><option value="hard">Hard</option>
+                    </select>
+                </div>
+                <button class="btn" style="width:100%" onclick="Race.init()">Lights Out</button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- DATABASE ---
+        const TEAMS = {
+            rbr: { name: "Red Bull", color: "#3671C6", perf: 99 },
+            mcl: { name: "McLaren", color: "#FF8000", perf: 97 },
+            fer: { name: "Ferrari", color: "#F91536", perf: 96 },
+            mer: { name: "Mercedes", color: "#6CD3BF", perf: 94 },
+            ast: { name: "STROLL Martin", color: "#225941", perf: 88 },
+            alp: { name: "Alpine", color: "#FF87BC", perf: 82 },
+            wil: { name: "Williams", color: "#64C4FF", perf: 80 },
+            haa: { name: "Haas", color: "#B6BABD", perf: 78 },
+            sau: { name: "Sauber", color: "#52E252", perf: 76 },
+            vca: { name: "VCARB", color: "#6692FF", perf: 84 },
+            player: { name: "Apex GP", color: "#FFFFFF", perf: 75 }
+        };
+
+        const DRIVERS = [
+            { id: 1, name: "Max Verstappen", num: 1, team: 'rbr', skill: 99, cost: 45.0 },
+            { id: 2, name: "Lando McNorris", num: 4, team: 'mcl', skill: 96, cost: 38.0 },
+            { id: 3, name: "Charles Leclerc", num: 16, team: 'fer', skill: 95, cost: 35.0 },
+            { id: 4, name: "Lewis Hamilton", num: 44, team: 'fer', skill: 95, cost: 34.0 },
+            { id: 5, name: "Oscar Piastri", num: 81, team: 'mcl', skill: 93, cost: 30.0 },
+            { id: 6, name: "George Russell", num: 63, team: 'mer', skill: 92, cost: 28.0 },
+            { id: 7, name: "Fernando Alonso", num: 14, team: 'ast', skill: 91, cost: 22.0 },
+            { id: 8, name: "Carlos Sainz", num: 55, team: 'wil', skill: 90, cost: 20.0 },
+            { id: 9, name: "Alex Albon", num: 23, team: 'wil', skill: 88, cost: 15.0 },
+            { id: 10, name: "Yuki Tsunoda", num: 22, team: 'vca', skill: 85, cost: 12.0 },
+            { id: 11, name: "Pierre Gasly", num: 10, team: 'alp', skill: 84, cost: 10.0 },
+            { id: 12, name: "Nico Hulkenberg", num: 27, team: 'sau', skill: 83, cost: 9.0 },
+            { id: 13, name: "Lance Money Stroll", num: 18, team: 'ast', skill: 79, cost: 8.0 },
+            { id: 14, name: "Esteban Ocon", num: 31, team: 'haa', skill: 83, cost: 9.0 },
+            { id: 15, name: "Liam Lawson", num: 30, team: 'vca', skill: 81, cost: 8.0 },
+            { id: 16, name: "Kimi Antonelli", num: 12, team: 'mer', skill: 80, cost: 8.0 },
+            { id: 17, name: "Ollie Bearman", num: 87, team: 'haa', skill: 79, cost: 7.0 },
+            { id: 18, name: "Jack Doohan", num: 7, team: 'alp', skill: 78, cost: 6.0 },
+            { id: 19, name: "Isack Hadjar", num: 43, team: 'rbr', skill: 77, cost: 5.0 },
+            { id: 20, name: "Gabriel Bortoleto", num: 5, team: 'sau', skill: 77, cost: 5.0 },
+            // Free Agents
+            { id: 99, name: "Valtteri Bottas", num: 77, team: 'free', skill: 82, cost: 5.0 },
+            { id: 98, name: "Kevin Magnussen", num: 20, team: 'free', skill: 80, cost: 4.0 },
+            { id: 97, name: "Sebastian Vettel", num: 5, team: 'free', skill: 89, cost: 15.0 },
+            { id: 96, name: "Mick Schumacher", num: 47, team: 'free', skill: 78, cost: 4.0 },
+        ];
+
+        const SPONSORS = [
+            { name: "Rolex", sign: 5.0, race: 0.5 },
+            { name: "Aramco", sign: 8.0, race: 0.2 },
+            { name: "DHL", sign: 3.0, race: 0.3 },
+            { name: "Heineken", sign: 4.0, race: 0.4 },
+            { name: "Salesforce", sign: 6.0, race: 0.3 }
+        ];
+
+        const TRACKS = [
+            { name: "Bahrain", laps: 57, base: 92, path: "M50,50 L250,50 L280,100 L250,150 L50,150 L20,100 Z" },
+            { name: "Jeddah", laps: 50, base: 88, path: "M30,30 L270,30 C290,30 290,60 270,60 L50,60 C30,60 30,90 50,90 L270,90" },
+            { name: "Monaco", laps: 78, base: 74, path: "M100,20 L200,20 L220,50 L200,80 L180,60 L120,60 L100,100 L50,80 Z" },
+            { name: "Silverstone", laps: 52, base: 87, path: "M50,100 L100,20 L200,20 L250,100 L200,180 L100,180 Z" },
+            { name: "Monza", laps: 53, base: 82, path: "M30,50 L270,50 C290,50 290,100 270,100 L30,100 C10,100 10,50 30,50" }
+        ];
+
+        // --- GAME STATE ---
+        const State = {
+            money: 400005.0,
+            round: 0,
+            inbox: [
+                { subject: "Welcome Boss", body: "Welcome to Apex GP. We need to finish P8 or better.", read: false }
+            ],
+            sponsors: [null, null, null], // 3 slots
+            availableSponsorIndices: [0, 1, 2, 3, 4], // Indices of SPONSORS that haven't been signed
+            drivers: {
+                d1: { ...DRIVERS.find(d => d.id === 17), team: 'player' }, // Bearman
+                d2: { ...DRIVERS.find(d => d.id === 20), team: 'player' }, // Bortoleto
+                res: { ...DRIVERS.find(d => d.id === 18), team: 'player' } // Doohan
+            },
+            car: { aero: 1, engine: 1, chassis: 1 },
+            points: {}
+        };
+        
+        // Init Points
+        DRIVERS.forEach(d => State.points[d.id] = 0);
+
+        // --- LOGIC ---
+        const Game = {
+            addMsg: (sub, body) => {
+                State.inbox.unshift({ subject: sub, body: body, read: false });
+                UI.updateBadge();
+            },
+
+            calcPerf: () => {
+                const resBonus = (State.drivers.res.skill - 70) * 0.2;
+                return 75 + (State.car.aero * 2) + (State.car.engine * 2) + State.car.chassis + resBonus;
+            },
+
+            hireDriver: (slot, id) => {
+                const target = DRIVERS.find(d => d.id === id);
+                if (State.money < target.cost) return alert("Insufficient Funds");
+                
+                const currentDrivers = Object.values(State.drivers).map(d => d.id);
+                if (currentDrivers.includes(id)) {
+                    return alert("You already employ this driver!");
+                }
+
+                if (confirm(`Hire ${target.name} for ${slot.toUpperCase()} for $${target.cost}M?`)) {
+                    State.money -= target.cost;
+                    
+                    const outgoing = State.drivers[slot];
+                    if (outgoing) {
+                        State.money += outgoing.cost * 0.5;
+                        const originalDriver = DRIVERS.find(d => d.id === outgoing.id);
+                        if(originalDriver) originalDriver.team = 'free';
+                        Game.addMsg("Driver Released", `${outgoing.name} released for $${(outgoing.cost * 0.5).toFixed(1)}M.`);
+                    }
+
+                    State.drivers[slot] = { ...target, team: 'player' };
+                    Game.addMsg("Contract Signed", `${target.name} has joined the team as ${slot.toUpperCase()}.`);
+                    
+                    const hiredDriverOriginal = DRIVERS.find(d => d.id === id);
+                    if(hiredDriverOriginal) hiredDriverOriginal.team = 'player';
+                    
+                    UI.updateHeader();
+                    UI.go('market');
+                }
+            },
+
+            signSponsor: (slotIdx, sponsorIdx) => {
+                const sp = SPONSORS[sponsorIdx];
+                if (confirm(`Sign ${sp.name}? Receive $${sp.sign}M bonus now, $${sp.race}M/race.`)) {
+                    State.sponsors[slotIdx] = { ...sp, index: sponsorIdx }; // Store original index
+                    State.money += sp.sign;
+                    
+                    // Remove this sponsor from the available list
+                    State.availableSponsorIndices = State.availableSponsorIndices.filter(i => i !== sponsorIdx);
+
+                    Game.addMsg("Sponsor Signed", `${sp.name} signed! Received $${sp.sign}M bonus.`);
+                    UI.updateHeader();
+                    UI.go('sponsors');
+                }
+            },
+
+            cancelSponsor: (slotIdx) => {
+                const sp = State.sponsors[slotIdx];
+                if (confirm(`Cancel contract with ${sp.name}?`)) {
+                    // Make the sponsor available again
+                    State.availableSponsorIndices.push(sp.index);
+                    State.sponsors[slotIdx] = null;
+                    Game.addMsg("Contract Cancelled", `${sp.name} contract terminated.`);
+                    UI.go('sponsors');
+                }
+            },
+
+            upgradeCar: (part, cost) => {
+                if(State.money >= cost) {
+                    State.money -= cost;
+                    State.car[part]++;
+                    Game.addMsg("Car Upgrade", `Installed Level ${State.car[part]} ${part.toUpperCase()} upgrade.`);
+                    UI.updateHeader();
+                    UI.go('car');
+                } else {
+                    alert("Insufficient Funds to upgrade.");
+                }
+            },
+
+            preRace: () => {
+                document.getElementById('modal-prerace').style.display = 'flex';
+                document.getElementById('lbl-d1').innerText = `${State.drivers.d1.name} (#${State.drivers.d1.num})`;
+                document.getElementById('lbl-d2').innerText = `${State.drivers.d2.name} (#${State.drivers.d2.num})`;
+            }
+        };
+
+        // --- UI ---
+        const UI = {
+            init: () => {
+                UI.updateHeader();
+                UI.updateBadge();
+                UI.go('home');
+            },
+
+            updateHeader: () => {
+                document.getElementById('ui-money').innerText = `$${State.money.toFixed(1)}M`;
+                document.getElementById('ui-track').innerText = TRACKS[State.round % TRACKS.length].name;
+            },
+            
+            updateBadge: () => {
+                const count = State.inbox.filter(m => !m.read).length;
+                const b = document.getElementById('mail-badge');
+                b.innerText = count;
+                b.classList.toggle('show', count > 0);
+            },
+
+            go: (view) => {
+                const c = document.getElementById('content');
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.nav-btn[onclick*="'${view}'"]`).classList.add('active');
+                
+                if (view === 'home') {
+                    c.innerHTML = `
+                        <div class="grid">
+                            <div class="card">
+                                <h2>Team Overview</h2>
+                                <p>Car Performance: <strong style="color:var(--accent)">${Math.floor(Game.calcPerf())}</strong></p>
+                                <p>Aero: ${State.car.aero} | Engine: ${State.car.engine} | Chassis: ${State.car.chassis}</p>
+                                <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
+                                    <div><strong>D1 (#${State.drivers.d1.num}):</strong> ${State.drivers.d1.name} (${State.drivers.d1.skill})</div>
+                                    <div><strong>D2 (#${State.drivers.d2.num}):</strong> ${State.drivers.d2.name} (${State.drivers.d2.skill})</div>
+                                    <div style="color:#888"><strong>RES (#${State.drivers.res.num}):</strong> ${State.drivers.res.name} (${State.drivers.res.skill})</div>
+                                </div>
+                            </div>
+                        </div>`;
+                }
+
+                if (view === 'inbox') {
+                    c.innerHTML = `<div class="card"><h2>Inbox</h2>${State.inbox.map(m => `
+                        <div class="msg-row ${m.read ? '' : 'unread'}">
+                            <div class="msg-subject">${m.subject}</div>
+                            <div class="msg-body">${m.body}</div>
+                        </div>
+                    `).join('')}</div>`;
+                    State.inbox.forEach(m => m.read = true);
+                    UI.updateBadge();
+                }
+
+                if (view === 'car') {
+                    const costs = { a: State.car.aero*2, e: State.car.engine*4, c: State.car.chassis*1.5 };
+                    c.innerHTML = `<div class="grid">
+                        ${UI.upgradeCard('Aerodynamics', State.car.aero, costs.a, 'aero')}
+                        ${UI.upgradeCard('Power Unit', State.car.engine, costs.e, 'engine')}
+                        ${UI.upgradeCard('Chassis', State.car.chassis, costs.c, 'chassis')}
+                    </div>`;
+                }
+
+                if (view === 'market') {
+                    c.innerHTML = `<div class="card"><h2>Driver Market</h2>
+                    ${DRIVERS.map(d => {
+                        const isMine = Object.values(State.drivers).some(my => my.id === d.id);
+                        return `
+                        <div class="driver-card">
+                            <div class="d-info">
+                                <span style="font-weight:900; width:30px">#${d.num}</span>
+                                <div>
+                                    <div style="font-weight:bold">${d.name}</div>
+                                    <div style="font-size:0.8rem; color:#888">${d.team==='free'?'Free Agent':TEAMS[d.team].name}</div>
+                                </div>
+                            </div>
+                            <div style="text-align:right">
+                                <div class="d-stat">${d.skill} OVR</div>
+                                <div class="d-cost">$${d.cost.toFixed(1)}M</div>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn" style="padding:5px; font-size:0.7rem; background:${isMine && State.drivers.d1.id===d.id ? 'var(--primary)' : 'var(--accent)'}" onclick="Game.hireDriver('d1', ${d.id})" ${isMine && State.drivers.d1.id===d.id ? 'disabled':''}>D1</button>
+                                <button class="btn" style="padding:5px; font-size:0.7rem; background:${isMine && State.drivers.d2.id===d.id ? 'var(--primary)' : 'var(--accent)'}" onclick="Game.hireDriver('d2', ${d.id})" ${isMine && State.drivers.d2.id===d.id ? 'disabled':''}>D2</button>
+                                <button class="btn" style="padding:5px; font-size:0.7rem; background:${isMine && State.drivers.res.id===d.id ? 'var(--primary)' : 'var(--accent)'}" onclick="Game.hireDriver('res', ${d.id})" ${isMine && State.drivers.res.id===d.id ? 'disabled':''}>RES</button>
+                            </div>
+                        </div>`
+                    }).join('')}</div>`;
+                }
+
+                if (view === 'sponsors') {
+                    let html = `<div class="grid">`;
+                    State.sponsors.forEach((s, idx) => {
+                        if (s) {
+                            html += `<div class="card" style="border-color:var(--success)">
+                                <h2>Slot ${idx+1} <span style="font-size:0.8rem; color:var(--success)">ACTIVE</span></h2>
+                                <div style="padding:20px; text-align:center;">
+                                    <div class="sponsor-logo">${s.name}</div>
+                                </div>
+                                <p>Payout: <strong>$${s.race}M</strong> / race</p>
+                                <button class="btn-outline" style="width:100%; border-color:var(--primary); color:var(--primary)" onclick="Game.cancelSponsor(${idx})">Cancel Contract</button>
+                            </div>`;
+                        } else {
+                            html += `<div class="card"><h2>Slot ${idx+1} <span style="font-size:0.8rem">EMPTY</span></h2>
+                                <div style="padding:10px; text-align:center; color:#888;">Available Offers:</div>
+                                ${State.availableSponsorIndices.map(spIdx => {
+                                    const sp = SPONSORS[spIdx];
+                                    return `
+                                        <div style="display:flex; justify-content:space-between; margin-bottom:5px; border-bottom:1px solid #333; padding:5px;">
+                                            <span>${sp.name}</span>
+                                            <button class="btn" style="padding:2px 8px; font-size:0.7rem" onclick="Game.signSponsor(${idx}, ${spIdx})">Sign (+$${sp.sign}M)</button>
+                                        </div>
+                                    `;
+                                }).join('')}
+                                ${State.availableSponsorIndices.length === 0 ? '<p style="text-align:center; color:#666">No offers available.</p>' : ''}
+                            </div>`;
+                        }
+                    });
+                    html += `</div>`;
+                    c.innerHTML = html;
+                }
+                
+                if (view === 'standings') {
+                    const sorted = [...DRIVERS].filter(d => d.team !== 'free').sort((a,b) => State.points[b.id] - State.points[a.id]);
+                    c.innerHTML = `<div class="card"><h2>Drivers Championship</h2>
+                    <table style="width:100%; border-collapse:collapse; font-size:0.9rem">
+                        <tr style="text-align:left; border-bottom:1px solid #444; color:#888"><th>Pos</th><th>Driver</th><th>Pts</th></tr>
+                        ${sorted.map((d,i) => `
+                            <tr style="border-bottom:1px solid #333">
+                                <td style="padding:8px; color:${i===0?'var(--warning)':''}; font-weight:bold">${i+1}</td>
+                                <td>${d.name} <span style="color:#666; font-size:0.8rem">${d.team==='player'?'Apex':TEAMS[d.team].name}</span></td>
+                                <td style="font-weight:bold">${State.points[d.id]}</td>
+                            </tr>
+                        `).join('')}
+                    </table></div>`;
+                }
+            },
+
+            upgradeCard: (name, lvl, cost, type) => `
+                <div class="card">
+                    <h2>${name} <span style="color:var(--accent)">Lvl ${lvl}</span></h2>
+                    <button class="btn" onclick="Game.upgradeCar('${type}', ${cost})" ${State.money<cost?'disabled':''}>Upgrade $${cost.toFixed(1)}M</button>
+                </div>`
+        };
+
+        // --- RACE ENGINE ---
+        const Race = {
+            active: false,
+            lap: 0,
+            speed: 1000,
+            weather: 0,
+            grid: [],
+            trackRotation: 0,
+            
+            d1: { pit: false, next: null, lastTime: 0 },
+            d2: { pit: false, next: null, lastTime: 0 },
+
+            init: () => {
+                document.getElementById('modal-prerace').style.display = 'none';
+                document.getElementById('race-overlay').style.display = 'flex';
+                
+                const track = TRACKS[State.round % TRACKS.length];
+                document.getElementById('track-vis').innerHTML = `<svg viewBox="0 0 300 200" style="width:100%"><path d="${track.path}" class="track-path" /></svg>`;
+                
+                document.getElementById('d1-hud-name').innerText = State.drivers.d1.name.substring(0,3).toUpperCase();
+                document.getElementById('d2-hud-name').innerText = State.drivers.d2.name.substring(0,3).toUpperCase();
+                document.getElementById('d1-num').innerText = State.drivers.d1.num;
+                document.getElementById('d2-num').innerText = State.drivers.d2.num;
+
+                // Reset strat controls and state
+                document.getElementById('d1-strat-btns').querySelectorAll('.strat-btn').forEach(b => b.classList.remove('selected'));
+                document.getElementById('d2-strat-btns').querySelectorAll('.strat-btn').forEach(b => b.classList.remove('selected'));
+                Race.d1.next = null; Race.d2.next = null; Race.d1.pit = false; Race.d2.pit = false;
+
+                // Build Grid
+                Race.grid = [];
+                // AI
+                DRIVERS.forEach(d => {
+                    const isMine = Object.values(State.drivers).some(my => my.id === d.id);
+                    if (!isMine && d.team !== 'free') {
+                        Race.grid.push(Race.createCar(d, TEAMS[d.team], 'medium', false));
+                    }
+                });
+                // Player
+                const pPerf = Game.calcPerf();
+                Race.grid.push(Race.createCar(State.drivers.d1, {name:"Apex", color:"#fff", perf:pPerf}, document.getElementById('sel-d1').value, true, 1));
+                Race.grid.push(Race.createCar(State.drivers.d2, {name:"Apex", color:"#fff", perf:pPerf}, document.getElementById('sel-d2').value, true, 2));
+
+                // Quick Quali Sort based on skill + random variance
+                Race.grid.sort((a,b) => b.skill - a.skill + (Math.random()*6 - 3));
+
+                Race.active = true;
+                Race.lap = 0;
+                Race.loop();
+            },
+
+            createCar: (d, t, tire, isP, pId) => ({
+                id: d.id, name: d.name, num: d.num, team: t.name, color: t.color, skill: (d.skill + t.perf)/2,
+                tire: tire, tireLife: 100, time: 0, pitting: false, isPlayer: isP, pId: pId, lastLapTime: 0, currentPos: 0
+            }),
+
+            loop: () => {
+                if(!Race.active) return;
+                
+                Race.lap++;
+                const track = TRACKS[State.round % TRACKS.length];
+                Race.trackRotation = (Race.trackRotation + 1) % 360; // Rotate 1 degree per loop
+
+                // Weather Update
+                if (Math.random() > 0.85) Race.weather += (Math.random()*10 - 4);
+                Race.weather = Math.max(0, Math.min(100, Race.weather));
+                const w = Race.weather;
+                document.getElementById('w-icon').innerText = w > 70 ? "🌧️" : (w > 30 ? "☁️" : "☀️");
+                document.getElementById('w-text').innerText = w > 70 ? "WET" : (w > 30 ? "DAMP" : "DRY");
+
+                // Sim Laps
+                Race.grid.forEach(c => {
+                    let t = track.base;
+                    t -= (c.skill - 80)*0.1; // Skill & Car Perf
+                    
+                    // Tire Physics
+                    if (c.tire === 'soft') t -= 1.0;
+                    if (c.tire === 'hard') t += 0.5;
+                    
+                    // Weather Penalty (Tuned to be less extreme for gradual change)
+                    const weatherFactor = Math.abs(w - (c.tire === 'inter' ? 70 : 10)) / 100;
+                    t += weatherFactor * 5; // Max 5s penalty for worst conditions/tire combo
+
+                    // Wear
+                    let deg = c.tire === 'soft' ? 4 : (c.tire === 'hard' ? 2 : 3);
+                    c.tireLife = Math.max(0, c.tireLife - deg);
+                    t += (100 - c.tireLife) * 0.05;
+
+                    // Pit Logic
+                    if (c.pitting) {
+                        t += 23; 
+                        c.tireLife = 100;
+                        c.pitting = false;
+                        
+                        if (c.isPlayer) {
+                            const strat = c.pId === 1 ? Race.d1 : Race.d2;
+                            if (strat.next) c.tire = strat.next;
+                            strat.pit = false;
+                            document.getElementById(`btn-box-${c.pId}`).classList.remove('active');
+                            document.getElementById(`d${c.pId}-strat-btns`).querySelectorAll('.strat-btn').forEach(b => b.classList.remove('selected'));
+                            Game.addMsg("Pit Stop", `Driver ${c.pId} successfully pitted for ${c.tire.toUpperCase()}.`);
+                        } else {
+                            // AI pit strategy
+                            c.tire = w > 70 ? 'inter' : (c.tireLife < 25 ? 'soft' : 'hard');
+                        }
+                    } else {
+                        // AI Decision
+                        if (!c.isPlayer) {
+                            if (c.tireLife < 20 || (w > 80 && c.tire !== 'inter') || (w < 20 && c.tire === 'inter')) c.pitting = true;
+                        } else {
+                            const strat = c.pId === 1 ? Race.d1 : Race.d2;
+                            if (strat.pit) c.pitting = true;
+                        }
+                    }
+                    
+                    c.lastLapTime = t + (Math.random()*0.3 - 0.15); // Add small variance
+                    c.time += c.lastLapTime;
+                });
+
+                // Sort Leaderboard
+                Race.grid.sort((a,b) => a.time - b.time);
+
+                Race.updateUI();
+
+                if (Race.lap >= track.laps) Race.finish();
+                else setTimeout(Race.loop, Race.speed);
+            },
+
+            // --- Controls ---
+            box: (id) => {
+                const s = id === 1 ? Race.d1 : Race.d2;
+                if (!s.next) return Game.addMsg("Pit Error", `Driver ${id}: Must select a tire compound for the pit stop!`);
+                s.pit = !s.pit;
+                const btn = document.getElementById(`btn-box-${id}`);
+                btn.classList.toggle('active', s.pit);
+                Game.addMsg("Pit Strategy", `Driver ${id} called in for a stop next lap.`);
+            },
+
+            setStrat: (id, tire) => {
+                const s = id === 1 ? Race.d1 : Race.d2;
+                s.next = tire;
+                document.getElementById(`d${id}-strat-btns`).querySelectorAll('.strat-btn').forEach(b => b.classList.remove('selected'));
+                document.querySelector(`#d${id}-strat-btns .t-${tire[0].toLowerCase()}`).parentElement.classList.add('selected');
+            },
+
+            toggleSpeed: () => {
+                Race.speed = Race.speed === 1000 ? 100 : 1000;
+                document.getElementById('race-speed').innerText = Race.speed === 100 ? "10" : "1";
+            },
+            
+            formatTime: (sec) => {
+                const minutes = Math.floor(sec / 60);
+                const seconds = sec % 60;
+                return `${minutes}'${seconds.toFixed(3).padStart(6, '0')}`;
+            },
+
+            updateUI: () => {
+                document.getElementById('race-lap').innerText = `${Race.lap}/${TRACKS[State.round%TRACKS.length].laps}`;
+                document.getElementById('track-vis').style.transform = `rotate(${Race.trackRotation}deg)`; // Apply rotation
+
+                const comms = document.getElementById('race-comms');
+                const p1 = Race.grid[0];
+                const p2 = Race.grid[1];
+                comms.innerText = `Leader: ${p1.name} | Gap P1-P2: ${(p2.time - p1.time).toFixed(2)}s. Conditions: ${document.getElementById('w-text').innerText}.`;
+
+                // Generate new list of rows based on sorted grid
+                const newRows = Race.grid.map((c,i) => {
+                    // Update car's current position for smooth animation reference
+                    c.currentPos = i + 1;
+                    const timeGap = i === 0 ? 'INT' : '+'+(c.time - Race.grid[0].time).toFixed(1);
+                    return `
+                        <div class="lb-row ${c.isPlayer?'player':''}" style="order:${i}">
+                            <div class="lb-pos">${i+1}</div>
+                            <div style="font-weight:bold; color:${c.color}">${c.name.split(' ').pop().substring(0,3).toUpperCase()} <span style="font-size:0.7rem; color:#888;">(#${c.num})</span></div>
+                            <div><span class="tire-badge t-${c.tire[0]}">${c.tire[0].toUpperCase()}</span></div>
+                            <div class="lb-time">${timeGap}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                document.getElementById('leaderboard').innerHTML = newRows;
+
+                // HUD
+                Race.grid.forEach(c => {
+                    if (c.isPlayer) {
+                        const pid = c.pId;
+                        document.getElementById(`d${pid}-tire`).innerText = `${Math.floor(c.tireLife)}%`;
+                        document.getElementById(`d${pid}-tire`).style.color = c.tireLife < 30 ? 'red' : 'white';
+                        document.getElementById(`d${pid}-pace`).innerText = Race.formatTime(c.lastLapTime);
+                    }
+                });
+            },
+
+            finish: () => {
+                Race.active = false;
+                const trackName = TRACKS[State.round%TRACKS.length].name;
+                const win = Race.grid[0];
+                Game.addMsg("🏁 Grand Prix Result", `${win.name} wins the ${trackName} GP!`);
+                document.getElementById('race-overlay').style.display = 'none';
+                
+                // Points and Payout
+                const pts = [25,18,15,12,10,8,6,4,2,1];
+                let payout = 0;
+                const p1Car = Race.grid.find(c => c.isPlayer && c.pId === 1);
+                const p2Car = Race.grid.find(c => c.isPlayer && c.pId === 2);
+                const p1Pos = p1Car ? p1Car.currentPos : 'DNF';
+                const p2Pos = p2Car ? p2Car.currentPos : 'DNF';
+                
+                Race.grid.forEach((c, i) => {
+                    if (i < 10) State.points[c.id] = (State.points[c.id] || 0) + pts[i];
+                    if (c.isPlayer) payout += (21-i) * 0.3;
+                });
+
+                State.sponsors.forEach(s => { if(s) payout += s.race; });
+
+                State.money += payout;
+                Game.addMsg("💵 Financial Update", `Round ${State.round+1} closed. Team Earnings: $${payout.toFixed(1)}M. P1 finished P${p1Pos}, P2 finished P${p2Pos}.`);
+                State.round++;
+                UI.updateHeader();
+                UI.go('standings');
+            }
+        };
+
+        UI.init();
+    </script>
+</body>
+</html>
